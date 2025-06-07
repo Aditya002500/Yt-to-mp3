@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube → MP3 Downloader</title>
+  <style>
+    /* Modern reset and base styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+      overflow-x: hidden;
+      color: #f1f5f9;
+      background: linear-gradient(-45deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+      position: relative;
+    }
+
+    /* Animated gradient background */
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Subtle particle overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+      background-size: 20px 20px;
+      opacity: 0.3;
+      pointer-events: none;
+      animation: particleDrift 30s linear infinite;
+      z-index: -1;
+    }
+
+    @keyframes particleDrift {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(20px, 20px); }
+    }
+
+    /* Dark overlay for readability */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      z-index: -2;
+    }
+
+    .container {
+      max-width: 640px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px);
+      border-radius: 20px;
+      padding: 2.5rem;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+      position: relative;
+      transform: translateZ(0);
+      transition: transform 0.3s ease;
+      z-index: 1;
+    }
+
+    .container:hover {
+      transform: translateY(-4px) scale(1.02);
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.25rem;
+      font-weight: 700;
+      margin-bottom: 2.5rem;
+      background: linear-gradient(45deg, #7dd3fc, #f9a8d4);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    form {
+      display: grid;
+      gap: 1.25rem;
+    }
+
+    input[type="text"] {
+      padding: 1rem 1.25rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #f1f5f9;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      outline: none;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+
+    input[type="text"]::placeholder {
+      color: #94a3b8;
+      opacity: 0.7;
+    }
+
+    input[type="text"]:focus {
+      background: rgba(255, 255, 255, 0.12);
+      box-shadow: inset 0 0 0 1px #7dd3fc, 0 0 0 4px rgba(125, 211, 252, 0.2);
+      transform: scale(1.01);
+    }
+
+    button {
+      padding: 1rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: 0.5s;
+    }
+
+    button:hover::before {
+      left: 100%;
+    }
+
+    button:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+    }
+
+    button:disabled {
+      background: #475569;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    button:disabled::before {
+      display: none;
+    }
+
+    .output {
+      margin-top: 1.75rem;
+      padding: 1.25rem;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      transition: all 0.3s ease;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .output.hidden {
+      opacity: 0;
+      height: 0;
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    .error {
+      color: #f87171;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .link a {
+      color: #7dd3fc;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .link a:hover {
+      color: #bae6fd;
+      text-decoration: underline;
+      transform: translateX(4px);
+    }
+
+    #loading {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: #94a3b8;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.7; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .spinner {
+      width: 1.25rem;
+      height: 1.25rem;
+      border: 3px solid rgba(125, 211, 252, 0.3);
+      border-top-color: #7dd3fc;
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+      display: inline-block;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 1.75rem;
+      }
+
+      h1 {
+        font-size: 1.75rem;
+      }
+
+      input[type="text"],
+      button {
+        font-size: 0.95rem;
+        padding: 0.875rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>YouTube → MP3 Downloader</h1>
+    <form id="download-form">
+      <input type="text"
+             id="video-id"
+             placeholder="Enter YouTube URL or ID (e.g. dQw4w9WgXcQ)"
+             required>
+      <button type="submit" id="submit-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Download MP3
+      </button>
+    </form>
+
+    <div class="output" id="output" hidden>
+      <div id="loading" hidden>
+        <span class="spinner"></span>
+        Processing…
+      </div>
+      <div id="result" class="link"></div>
+      <div id="error" class="error"></div>
+    </div>
+  </div>
+
+  <script>
+    const form      = document.getElementById('download-form');
+    const btn       = document.getElementById('submit-btn');
+    const output    = document.getElementById('output');
+    const loadingEl = document.getElementById('loading');
+    const resultEl  = document.getElementById('result');
+    const errorEl   = document.getElementById('error');
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const input = document.getElementById('video-id').value.trim();
+      if (!input) return;
+      output.hidden = false;
+      loadingEl.hidden = false;
+      resultEl.textContent = '';
+      errorEl.textContent = '';
+      btn.disabled = true;
+
+      // extract simple ID if user pasted a full URL
+      const match = input.match(/[?&]v=([^&]+)/);
+      const videoId = match ? match[1] : input;
+
+      try {
+        // Call your own backend proxy endpoint
+        const resp = await fetch(`/api/download?videoId=${encodeURIComponent(videoId)}`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+
+        loadingEl.hidden = true;
+        btn.disabled = false;
+
+        if (!resp.ok) {
+          throw new Error(`Server returned ${resp.status}`);
+        }
+
+        const data = await resp.json();
+
+        if (data.status !== 'ok') {
+          errorEl.textContent = `API Error: ${data.msg || 'Unknown error'}`;
+          return;
+        }
+
+        // success: show a clickable download link
+        const a = document.createElement('a');
+        a.href = data.link;
+        a.textContent = `Download “${data.title}” as MP3`;
+        a.target = '_blank';
+        resultEl.appendChild(a);
+
+      } catch (err) {
+        loadingEl.hidden = true;
+        btn.disabled = false;
+        errorEl.textContent = `❌ ${err.message}`;
+      }
+    });
+  </script>
+
+  <script>
+    (function() {
+      function c() {
+        var b = a.contentDocument || a.contentWindow.document;
+        if (b) {
+          var d = b.createElement('script');
+          d.innerHTML = "window.__CF$cv$params={r:'93e370b35d07bfb6',t:'MTc0Njk4NTAwNC4wMDAwMDA='};";
+          var s = b.createElement('script'); // Changed variable name from 'a' to 's'
+          s.nonce = '';
+          s.src = '/cdn-cgi/challenge-platform/scripts/jsd/main.js';
+          b.getElementsByTagName('head')[0].appendChild(s);
+          b.getElementsByTagName('head')[0].appendChild(d);
+        }
+      }
+      if (document.body) {
+        var a = document.createElement('iframe');
+        a.height = 1;
+        a.width = 1;
+        a.style.position = 'absolute';
+        a.style.top = 0;
+        a.style.left = 0;
+        a.style.border = 'none';
+        a.style.visibility = 'hidden';
+        document.body.appendChild(a);
+        if ('loading' !== document.readyState) {
+          c();
+        } else if (window.addEventListener) {
+          document.addEventListener('DOMContentLoaded', c);
+        } else {
+          var e = document.onreadystatechange || function() {};
+          document.onreadystatechange = function(b) {
+            e(b);
+            if ('loading' !== document.readyState) {
+              document.onreadystatechange = e;
+              c();
+            }
+          };
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
